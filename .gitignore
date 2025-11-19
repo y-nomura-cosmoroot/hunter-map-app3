@@ -1,0 +1,7 @@
+backend/temp/
+*.kml
+temp/
+logs/
+*.pdf
+.vscode/
+sample/
