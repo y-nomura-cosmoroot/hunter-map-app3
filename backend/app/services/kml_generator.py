@@ -72,8 +72,14 @@ class KMLGenerator:
             box: Transformed box with geographic coordinates
             index: Box index for naming
         """
-        # Create placemark
-        placemark = kml.newpolygon(name=f"Box {index}")
+        # Determine box type and set appropriate styling
+        box_type = box.box_type if hasattr(box, 'box_type') else "thick_border"
+        
+        # Create placemark with appropriate name
+        if box_type.startswith("blue"):
+            placemark = kml.newpolygon(name=f"Blue Box {index}")
+        else:
+            placemark = kml.newpolygon(name=f"Red Box {index}")
         
         # Set polygon coordinates (must close the ring by repeating first point)
         # KML format: longitude, latitude, altitude
@@ -86,15 +92,24 @@ class KMLGenerator:
         
         placemark.outerboundaryis = coords
         
-        # Add description with center point
+        # Add description with center point and type
         placemark.description = (
             f"Box ID: {box.id}\n"
+            f"Type: {box_type}\n"
             f"Center: {box.center.lat:.6f}, {box.center.lng:.6f}"
         )
         
-        # Style settings (optional - makes boxes visible)
-        placemark.style.linestyle.color = simplekml.Color.red
-        placemark.style.linestyle.width = 2
-        placemark.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
+        # Style settings based on box type
+        # Unified colors: Red for red boxes, Blue for blue boxes
+        if box_type.startswith("blue"):
+            # All blue boxes use the same blue color
+            placemark.style.linestyle.color = simplekml.Color.blue
+            placemark.style.linestyle.width = 2
+            placemark.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.blue)
+        else:
+            # All red boxes use the same red color
+            placemark.style.linestyle.color = simplekml.Color.red
+            placemark.style.linestyle.width = 2
+            placemark.style.polystyle.color = simplekml.Color.changealphaint(100, simplekml.Color.red)
         
-        logger.debug(f"Created polygon for Box {index} (ID: {box.id})")
+        logger.debug(f"Created polygon for Box {index} (ID: {box.id}, Type: {box_type})")

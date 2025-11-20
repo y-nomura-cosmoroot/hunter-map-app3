@@ -65,7 +65,7 @@ const ResultPreviewComponent: React.FC<ResultPreviewComponentProps> = ({
       <div className="preview-header">
         <h3>変換結果</h3>
         <span className="box-count">
-          {transformedBoxes.length} 個の赤枠
+          {transformedBoxes.length} 個の枠
         </span>
       </div>
 
@@ -97,17 +97,23 @@ const ResultPreviewComponent: React.FC<ResultPreviewComponentProps> = ({
 
       {/* Transformed boxes list */}
       <div className="boxes-section">
-        <h4>変換された赤枠の座標</h4>
+        <h4>変換された枠の座標</h4>
         {transformedBoxes.length === 0 ? (
           <div className="empty-boxes">
-            <p>変換された赤枠がありません</p>
+            <p>変換された枠がありません</p>
           </div>
         ) : (
           <div className="boxes-list">
-            {transformedBoxes.map((box, index) => (
-              <div key={box.id} className="box-item">
+            {transformedBoxes.map((box, index) => {
+              // Determine box color based on type
+              const isBlue = box.boxType?.startsWith('blue');
+              const boxColor = isBlue ? '青枠' : '赤枠';
+              const boxClass = isBlue ? 'box-item blue-box' : 'box-item red-box';
+              
+              return (
+              <div key={box.id} className={boxClass}>
                 <div className="box-header">
-                  <span className="box-label">赤枠 {index + 1}</span>
+                  <span className="box-label">{boxColor} {index + 1}</span>
                   <span className="box-id">{box.id}</span>
                 </div>
                 <div className="box-coords">
@@ -133,7 +139,8 @@ const ResultPreviewComponent: React.FC<ResultPreviewComponentProps> = ({
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

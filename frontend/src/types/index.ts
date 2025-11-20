@@ -20,13 +20,14 @@ export interface DetectedBox {
   id: string;
   corners: Point[];
   center: Point;
-  boxType: 'thick_border' | 'filled_area';
+  boxType: 'thick_border' | 'filled_area' | 'blue_thick_border' | 'blue_filled_area';
 }
 
 export interface TransformedBox {
   id: string;
   corners: GeoPoint[];
   center: GeoPoint;
+  boxType?: string;
 }
 
 export interface MapMarker {

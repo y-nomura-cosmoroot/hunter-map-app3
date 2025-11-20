@@ -1,4 +1,4 @@
-"""Red box detection API endpoint."""
+"""Red box and blue box detection API endpoint."""
 from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from pathlib import Path
@@ -8,14 +8,16 @@ import json
 from app.models.schemas import DetectionResponse, ErrorResponse
 from app.models.errors import get_error_message
 from app.services.red_box_detector import RedBoxDetector
+from app.services.blue_box_detector import BlueBoxDetector
 from app.config import settings
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["detection"])
 
-# Initialize red box detector
+# Initialize detectors
 red_box_detector = RedBoxDetector()
+blue_box_detector = BlueBoxDetector()
 
 
 class DetectionRequest(BaseModel):
@@ -61,10 +63,17 @@ async def detect_boxes(request: DetectionRequest) -> DetectionResponse:
             detail=error_info
         )
     
-    # Detect red boxes
+    # Detect red boxes and blue boxes
     try:
-        detected_boxes = red_box_detector.detect_red_boxes(str(image_path))
-        logger.info(f"Detected {len(detected_boxes)} red boxes")
+        red_boxes = red_box_detector.detect_red_boxes(str(image_path))
+        logger.info(f"Detected {len(red_boxes)} red boxes")
+        
+        blue_boxes = blue_box_detector.detect_blue_boxes(str(image_path))
+        logger.info(f"Detected {len(blue_boxes)} blue boxes")
+        
+        # Combine all detected boxes
+        detected_boxes = red_boxes + blue_boxes
+        logger.info(f"Total detected boxes: {len(detected_boxes)}")
     except FileNotFoundError as e:
         logger.error(f"File not found during detection: {str(e)}")
         error_info = get_error_message("file_not_found")
@@ -92,7 +101,7 @@ async def detect_boxes(request: DetectionRequest) -> DetectionResponse:
     
     # Check if any boxes were detected
     if len(detected_boxes) == 0:
-        logger.warning("No red boxes detected in the image")
+        logger.warning("No red or blue boxes detected in the image")
         error_info = get_error_message("no_boxes_detected")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

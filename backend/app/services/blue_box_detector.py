@@ -1,4 +1,4 @@
-"""Red box detection module for identifying red boxes in PDF images."""
+"""Blue box detection module for identifying blue boxes in PDF images."""
 import os
 import uuid
 import logging
@@ -11,28 +11,30 @@ from app.models.schemas import DetectedBox, Point
 logger = logging.getLogger(__name__)
 
 
-class RedBoxDetector:
-    """Detects red boxes (thick borders and filled areas) in images."""
+class BlueBoxDetector:
+    """Detects blue boxes (thick borders and filled areas) in images."""
     
     def __init__(self, min_area: Optional[int] = None, min_perimeter: Optional[int] = None):
         """
-        Initialize red box detector with configurable parameters.
+        Initialize blue box detector with configurable parameters.
         
         Args:
             min_area: Minimum area threshold in pixels (not used, kept for compatibility)
             min_perimeter: Minimum perimeter threshold in pixels (not used, kept for compatibility)
         """
-        # Parameters for filled red area detection (lighter, less saturated red)
-        self.filled_area_hsv_lower1 = np.array([0, 30, 180])
-        self.filled_area_hsv_upper1 = np.array([10, 120, 255])
-        self.filled_area_hsv_lower2 = np.array([170, 30, 180])
-        self.filled_area_hsv_upper2 = np.array([180, 120, 255])
+        # Parameters for thick blue border detection (dark blue)
+        self.thick_border_hsv_lower = np.array([100, 100, 100])
+        self.thick_border_hsv_upper = np.array([130, 255, 255])
         
-        logger.info("RedBoxDetector initialized with improved detection algorithm")
+        # Parameters for filled blue area detection (light blue)
+        self.filled_area_hsv_lower = np.array([90, 30, 180])
+        self.filled_area_hsv_upper = np.array([130, 150, 255])
+        
+        logger.info("BlueBoxDetector initialized")
     
-    def detect_red_boxes(self, image_path: str) -> List[DetectedBox]:
+    def detect_blue_boxes(self, image_path: str) -> List[DetectedBox]:
         """
-        Detect red boxes in an image.
+        Detect blue boxes in an image.
         
         Args:
             image_path: Path to the image file
@@ -53,64 +55,59 @@ class RedBoxDetector:
             if image is None:
                 raise ValueError(f"Cannot read image: {image_path}")
             
-            logger.info(f"Detecting red boxes in image: {image_path}")
+            logger.info(f"Detecting blue boxes in image: {image_path}")
             logger.debug(f"Image shape: {image.shape}")
             
-            # Detect thick red borders
-            thick_border_boxes = self._detect_thick_red_borders(image)
-            logger.info(f"Detected {len(thick_border_boxes)} thick red borders")
+            # Detect thick blue borders
+            thick_border_boxes = self._detect_thick_blue_borders(image)
+            logger.info(f"Detected {len(thick_border_boxes)} thick blue borders")
             
-            # Detect filled red areas
-            filled_area_boxes = self._detect_filled_red_areas(image)
-            logger.info(f"Detected {len(filled_area_boxes)} filled red areas")
+            # Detect filled blue areas
+            filled_area_boxes = self._detect_filled_blue_areas(image)
+            logger.info(f"Detected {len(filled_area_boxes)} filled blue areas")
             
             # Combine results and remove duplicates
             all_boxes = []
             
             # Convert thick border boxes to DetectedBox
             for box in thick_border_boxes:
-                detected_box = self._create_detected_box(box, "thick_border")
+                detected_box = self._create_detected_box(box, "blue_thick_border")
                 all_boxes.append(detected_box)
             
             # Convert filled area boxes to DetectedBox
             for box in filled_area_boxes:
-                detected_box = self._create_detected_box(box, "filled_area")
+                detected_box = self._create_detected_box(box, "blue_filled_area")
                 all_boxes.append(detected_box)
             
             # Remove overlapping boxes (keep larger ones)
             all_boxes = self._remove_overlapping_boxes(all_boxes)
             
-            logger.info(f"Total detected boxes after filtering: {len(all_boxes)}")
+            logger.info(f"Total detected blue boxes after filtering: {len(all_boxes)}")
             return all_boxes
             
         except Exception as e:
-            logger.error(f"Failed to detect red boxes: {str(e)}")
-            raise ValueError(f"Red box detection failed: {str(e)}")
+            logger.error(f"Failed to detect blue boxes: {str(e)}")
+            raise ValueError(f"Blue box detection failed: {str(e)}")
     
-    def _detect_thick_red_borders(self, image: np.ndarray) -> List[np.ndarray]:
+    def _detect_thick_blue_borders(self, image: np.ndarray) -> List[np.ndarray]:
         """
-        Detect thick red borders using improved morphological operations.
-        
-        Uses dilation -> fill -> erosion approach to create closed regions from red lines.
+        Detect thick blue borders using morphological operations.
         
         Args:
             image: Input image (BGR format)
             
         Returns:
-            List of contours representing red borders (closed polygons)
+            List of contours representing blue borders (closed polygons)
         """
         # Convert to HSV color space
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         
-        # Create mask for red color (two ranges due to hue wrap-around)
-        # Use broader range to capture more red pixels
-        mask1 = cv2.inRange(hsv, np.array([0, 100, 100]), np.array([10, 255, 255]))
-        mask2 = cv2.inRange(hsv, np.array([160, 100, 100]), np.array([180, 255, 255]))
-        red_mask = cv2.bitwise_or(mask1, mask2)
+        # Create mask for dark blue color
+        blue_mask = cv2.inRange(hsv, self.thick_border_hsv_lower, self.thick_border_hsv_upper)
         
         # Step 1: Dilate to thicken lines and connect gaps
         kernel_dilate = np.ones((15, 15), np.uint8)
-        mask_dilated = cv2.dilate(red_mask, kernel_dilate, iterations=1)
+        mask_dilated = cv2.dilate(blue_mask, kernel_dilate, iterations=1)
         
         # Step 2: Fill holes to create closed regions
         mask_filled = mask_dilated.copy()
@@ -124,65 +121,58 @@ class RedBoxDetector:
         # Find contours from the processed mask
         contours, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # Filter contours by area only
+        # Filter contours by area
         boxes = []
         for contour in contours:
             area = cv2.contourArea(contour)
             
             # Lower threshold to detect smaller regions (1000 pixels²)
-            # This allows detection of smaller red-boxed areas
             if area < 1000:
-                logger.debug(f"Skipping small contour: area={area:.1f}")
+                logger.debug(f"Skipping small blue contour: area={area:.1f}")
                 continue
             
-            # Use original contour without approximation for accurate shape
-            # Reshape to 2D array of points
             polygon = contour.reshape(-1, 2)
             boxes.append(polygon)
-            logger.debug(f"Detected thick border: {len(contour)} vertices, area={area:.1f}")
+            logger.debug(f"Detected thick blue border: {len(contour)} vertices, area={area:.1f}")
         
         return boxes
     
-    def _detect_filled_red_areas(self, image: np.ndarray) -> List[np.ndarray]:
+    def _detect_filled_blue_areas(self, image: np.ndarray) -> List[np.ndarray]:
         """
-        Detect filled red areas using color masking with improved morphology.
+        Detect filled blue areas using color masking.
         
         Args:
             image: Input image (BGR format)
             
         Returns:
-            List of contours representing filled red areas (closed polygons)
+            List of contours representing filled blue areas (closed polygons)
         """
         # Convert to HSV color space
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
         
-        # Create mask for light red color (two ranges due to hue wrap-around)
-        mask1 = cv2.inRange(hsv, self.filled_area_hsv_lower1, self.filled_area_hsv_upper1)
-        mask2 = cv2.inRange(hsv, self.filled_area_hsv_lower2, self.filled_area_hsv_upper2)
-        red_mask = cv2.bitwise_or(mask1, mask2)
+        # Create mask for light blue color
+        blue_mask = cv2.inRange(hsv, self.filled_area_hsv_lower, self.filled_area_hsv_upper)
         
         # Apply morphological closing to fill small gaps
         kernel_close = np.ones((5, 5), np.uint8)
-        red_mask = cv2.morphologyEx(red_mask, cv2.MORPH_CLOSE, kernel_close, iterations=1)
+        blue_mask = cv2.morphologyEx(blue_mask, cv2.MORPH_CLOSE, kernel_close, iterations=1)
         
         # Find contours
-        contours, _ = cv2.findContours(red_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, _ = cv2.findContours(blue_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
-        # Filter contours by area only
+        # Filter contours by area
         boxes = []
         for contour in contours:
             area = cv2.contourArea(contour)
             
             # Lower threshold to detect smaller filled areas (2000 pixels²)
             if area < 2000:
-                logger.debug(f"Skipping small filled area: area={area:.1f}")
+                logger.debug(f"Skipping small filled blue area: area={area:.1f}")
                 continue
             
-            # Use original contour without approximation for accurate shape
-            # Reshape to 2D array of points
             polygon = contour.reshape(-1, 2)
             boxes.append(polygon)
-            logger.debug(f"Detected filled area: {len(contour)} vertices, area={area:.1f}")
+            logger.debug(f"Detected filled blue area: {len(contour)} vertices, area={area:.1f}")
         
         return boxes
     
@@ -192,7 +182,7 @@ class RedBoxDetector:
         
         Args:
             box: Array of polygon corner points (N x 2)
-            box_type: Type of box ("thick_border" or "filled_area")
+            box_type: Type of box ("blue_thick_border" or "blue_filled_area")
             
         Returns:
             DetectedBox model instance
@@ -200,7 +190,7 @@ class RedBoxDetector:
         # Generate unique ID
         box_id = str(uuid.uuid4())
         
-        # Convert to Point objects (keep all vertices)
+        # Convert to Point objects
         corners = [
             Point(x=float(point[0]), y=float(point[1]))
             for point in box
@@ -234,7 +224,6 @@ class RedBoxDetector:
         # Calculate area for each box
         box_areas = []
         for box in boxes:
-            # Convert corners to numpy array for area calculation
             points = np.array([[c.x, c.y] for c in box.corners], dtype=np.float32)
             area = cv2.contourArea(points)
             box_areas.append((box, area))
@@ -245,20 +234,16 @@ class RedBoxDetector:
         # Keep non-overlapping boxes
         kept_boxes = []
         for box, area in box_areas:
-            # Check if this box significantly overlaps with any kept box
             is_duplicate = False
             box_points = np.array([[c.x, c.y] for c in box.corners], dtype=np.float32)
             
             for kept_box in kept_boxes:
                 kept_points = np.array([[c.x, c.y] for c in kept_box.corners], dtype=np.float32)
-                
-                # Calculate IoU (Intersection over Union)
                 overlap_ratio = self._calculate_polygon_overlap(box_points, kept_points, area)
                 
-                # If overlap is significant (>50%), consider it a duplicate
                 if overlap_ratio > 0.5:
                     is_duplicate = True
-                    logger.debug(f"Removing duplicate box with {overlap_ratio:.2%} overlap")
+                    logger.debug(f"Removing duplicate blue box with {overlap_ratio:.2%} overlap")
                     break
             
             if not is_duplicate:
@@ -284,19 +269,14 @@ class RedBoxDetector:
             Overlap ratio (0.0 to 1.0)
         """
         try:
-            # Check if center of poly1 is inside poly2
             center1 = np.mean(poly1, axis=0)
             if cv2.pointPolygonTest(poly2, tuple(center1), False) >= 0:
-                # Center is inside, likely significant overlap
                 return 0.8
             
-            # Check if center of poly2 is inside poly1
             center2 = np.mean(poly2, axis=0)
             if cv2.pointPolygonTest(poly1, tuple(center2), False) >= 0:
-                # Center is inside, likely significant overlap
                 return 0.8
             
-            # Check if any vertices overlap
             overlap_count = 0
             for point in poly1:
                 if cv2.pointPolygonTest(poly2, tuple(point), False) >= 0:

@@ -31,15 +31,18 @@
 
 ### 要件2
 
-**ユーザーストーリー:** ユーザーとして、PDF画像から赤枠を自動検出できるようにしたい。そうすることで、手動で座標を入力する手間を省ける。
+**ユーザーストーリー:** ユーザーとして、PDF画像から赤枠と青枠を自動検出できるようにしたい。そうすることで、手動で座標を入力する手間を省ける。
 
 #### 受入基準
 
 1. THE System SHALL PDF画像から濃い赤枠を検出する
 2. THE System SHALL PDF画像から薄い赤で中が塗りつぶされた矩形を検出する
-3. WHEN 赤枠が検出される, THE System SHALL 各赤枠の画像上の座標（ピクセル位置）を記録する
-4. WHEN 赤枠が検出される, THE System SHALL 検出された赤枠の数をUserに表示する
-5. IF 赤枠が検出されない, THEN THE System SHALL Userに通知メッセージを表示する
+3. THE System SHALL PDF画像から濃い青枠を検出する
+4. THE System SHALL PDF画像から薄い青で中が塗りつぶされた矩形を検出する
+5. WHEN 赤枠または青枠が検出される, THE System SHALL 各枠の画像上の座標（ピクセル位置）を記録する
+6. WHEN 赤枠または青枠が検出される, THE System SHALL 検出された枠の数をUserに表示する
+7. WHEN 赤枠または青枠が検出される, THE System SHALL 各枠のタイプ（赤枠/青枠、濃い枠線/薄い塗りつぶし）を記録する
+8. IF 赤枠も青枠も検出されない, THEN THE System SHALL Userに通知メッセージを表示する
 
 ### 要件3
 
@@ -87,14 +90,16 @@
 
 ### 要件6
 
-**ユーザーストーリー:** ユーザーとして、検出された赤枠の情報を含むKMLファイルを生成できるようにしたい。そうすることで、Google EarthなどのGISアプリケーションで結果を可視化できる。
+**ユーザーストーリー:** ユーザーとして、検出された赤枠と青枠の情報を含むKMLファイルを生成できるようにしたい。そうすることで、Google EarthなどのGISアプリケーションで結果を可視化できる。
 
 #### 受入基準
 
-1. THE System SHALL 検出された各赤枠の緯度経度を含むKMLファイルを生成する
-2. THE System SHALL KMLファイル内に各赤枠をPolygon要素として記述する
-3. THE System SHALL 生成されたKMLファイルをUserがダウンロードできる機能を提供する
-4. WHEN KMLファイルが生成される, THE System SHALL ファイル名に日時情報を含める
+1. THE System SHALL 検出された各赤枠と青枠の緯度経度を含むKMLファイルを生成する
+2. THE System SHALL KMLファイル内に各枠をPolygon要素として記述する
+3. THE System SHALL 赤枠と青枠を異なるスタイル（色、透明度）で表示する
+4. THE System SHALL 濃い枠線と薄い塗りつぶしを異なるスタイルで表示する
+5. THE System SHALL 生成されたKMLファイルをUserがダウンロードできる機能を提供する
+6. WHEN KMLファイルが生成される, THE System SHALL ファイル名に日時情報を含める
 5. THE System SHALL 生成されたKMLファイルがKML 2.2標準に準拠することを保証する
 
 ### 要件7

@@ -25,13 +25,13 @@ class ReferencePoint(BaseModel):
 
 
 class DetectedBox(BaseModel):
-    """Detected red box in the PDF image."""
+    """Detected red or blue box in the PDF image."""
     model_config = {"populate_by_name": True}
     
     id: str
     corners: List[Point] = Field(min_length=3)
     center: Point
-    box_type: Literal["thick_border", "filled_area"] = Field(alias="boxType")
+    box_type: Literal["thick_border", "filled_area", "blue_thick_border", "blue_filled_area"] = Field(alias="boxType")
     
     @field_validator("corners")
     @classmethod
@@ -43,10 +43,11 @@ class DetectedBox(BaseModel):
 
 
 class TransformedBox(BaseModel):
-    """Red box with transformed geographic coordinates."""
+    """Red or blue box with transformed geographic coordinates."""
     id: str
     corners: List[GeoPoint] = Field(min_length=3)
     center: GeoPoint
+    box_type: str = "thick_border"  # Type of box for styling in KML
     
     @field_validator("corners")
     @classmethod

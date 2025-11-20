@@ -3,5 +3,6 @@ backend/temp/
 temp/
 logs/
 *.pdf
+*.png
 .vscode/
 sample/

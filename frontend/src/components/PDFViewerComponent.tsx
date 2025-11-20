@@ -99,25 +99,26 @@ const PDFViewerComponent: React.FC<PDFViewerComponentProps> = ({
       }
       ctx.closePath();
 
-      // Style based on selection
+      // Style based on selection (unified yellow for all boxes)
       if (isSelected) {
-        ctx.strokeStyle = '#00ff00';
+        ctx.strokeStyle = '#00ff00'; // Green when selected
         ctx.lineWidth = 3 / scale;
         ctx.fillStyle = 'rgba(0, 255, 0, 0.1)';
         ctx.fill();
       } else {
-        ctx.strokeStyle = '#ffff00';
+        ctx.strokeStyle = '#ffff00'; // Yellow for all unselected boxes
         ctx.lineWidth = 2 / scale;
         ctx.fillStyle = 'rgba(255, 255, 0, 0.05)';
         ctx.fill();
       }
       ctx.stroke();
 
-      // Draw box ID label
+      // Draw box ID label with type indicator
+      const boxLabel = box.boxType.startsWith('blue') ? 'Blue' : 'Red';
       ctx.fillStyle = isSelected ? '#00ff00' : '#ffff00';
       ctx.font = `${14 / scale}px Arial`;
       ctx.fillText(
-        `Box ${box.id.substring(0, 8)}`,
+        `${boxLabel} ${box.id.substring(0, 6)}`,
         box.center.x,
         box.center.y
       );
@@ -398,7 +399,7 @@ const PDFViewerComponent: React.FC<PDFViewerComponentProps> = ({
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
         onClick={handleClick}
-        style={{ 
+        style={{
           cursor: isDragging ? 'grabbing' : 'crosshair',
         }}
         title="クリックして基準点を設定"

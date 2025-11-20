@@ -160,7 +160,8 @@ class GeoTransformer:
         return TransformedBox(
             id=box.id,
             corners=transformed_corners,
-            center=transformed_center
+            center=transformed_center,
+            box_type=box.box_type
         )
     
     def estimate_map_scale(
